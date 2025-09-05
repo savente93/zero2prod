@@ -38,7 +38,7 @@ pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
     // Migrate database
     let connection_pool = PgPool::connect_with(config.with_db())
         .await
-        .expect("Failed to connect to postgress.");
+        .expect("Failed to connect to postgres.");
     sqlx::migrate!("./migrations")
         .run(&connection_pool)
         .await
@@ -55,7 +55,7 @@ async fn spawn_app() -> TestApp {
     configuration.database.database_name = Uuid::new_v4().to_string();
     let connection_pool = configure_database(&configuration.database).await;
     let server = run(listener, connection_pool.clone()).expect("Failed to bind address");
-    let _ = tokio::spawn(server);
+    let _future = tokio::spawn(server);
     let address = format!("http://127.0.0.1:{}", port);
     TestApp {
         address,
@@ -73,7 +73,7 @@ async fn health_test_works() {
         .get(format!("{}/health_check", &test_app.address))
         .send()
         .await
-        .expect("Failed to exeecute request.");
+        .expect("Failed to execute request.");
 
     assert!(response.status().is_success());
     assert_eq!(Some(0), response.content_length());
@@ -131,5 +131,33 @@ async fn subscribe_returns_400_when_data_is_missing() {
             "The API did not fail with 400 Bad Request when the payload was {}.",
             error_message
         );
+    }
+}
+
+#[tokio::test]
+async fn subscribe_returns_400_when_fields_are_present_but_empty() {
+    let app = spawn_app().await;
+    let client = reqwest::Client::new();
+    let test_cases = vec![
+        ("name=&email=urula_le_guin%40gmail.com", "empty name"),
+        ("name=Usula&email=definitely-not-an-email", "invalid email"),
+        ("name=Ursula&email=", "empty email"),
+    ];
+
+    for (body, description) in test_cases {
+        let response = client
+            .post(format!("{}/subscriptions", app.address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(body)
+            .send()
+            .await
+            .expect("Failed to execute request.");
+
+        assert_eq!(
+            400,
+            response.status().as_u16(),
+            "the api did not return a 400 Bad Request when the payload was {}.",
+            description
+        )
     }
 }
