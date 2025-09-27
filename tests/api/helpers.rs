@@ -1,11 +1,9 @@
 use once_cell::sync::Lazy;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
-use unicode_segmentation::UnicodeSegmentation;
 use uuid::Uuid;
 use wiremock::MockServer;
 use zero2prod::{
     configuration::{get_configuration, DatabaseSettings},
-    email_client,
     startup::{get_connection_pool, Application},
     telemetry::{get_subscriber, init_subscriber},
 };
