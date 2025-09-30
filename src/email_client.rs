@@ -1,7 +1,6 @@
 use crate::domain::SubscriberEmail;
 use reqwest::Client;
 use secrecy::{ExposeSecret, Secret};
-use serde::Serialize;
 
 pub struct EmailClient {
     sender: SubscriberEmail,
